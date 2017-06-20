@@ -1,12 +1,39 @@
 import warnings
+from abc import ABC, abstractmethod
 import numpy as np
 
 from astropy.io import fits
 from astropy.stats.funcs import median_absolute_deviation
 import scipy.ndimage
 
-class TargetPixelFile(object):
-    """Enables extraction of raw lightcurves and centroid positions.
+from .lightcurve import LightCurve
+
+class TargetPixelFile(ABC):
+    @abstractmethod
+    def to_lightcurve(self, aperture_mask=None):
+    """Returns a raw light curve of the TPF.
+
+    Attributes
+    ----------
+    aperture_mask: boolean ndarray or None
+        TODO: astropy regions??
+
+        Aperture under which the flux will be summed up. If ``None``,
+        then an aperture is computed using ``aperture_mask``.
+
+    Returns
+    -------
+    lightcurve : LightCurve
+        Array containing the summed flux within the aperture for each
+        cadence.
+    """
+    pass
+
+
+class KeplerTargetPixelFile(object):
+    """
+    Defines a tpf class for the Kepler Mission.
+    Enables extraction of raw lightcurves and centroid positions.
 
     Attributes
     ----------
@@ -14,7 +41,7 @@ class TargetPixelFile(object):
         Path to fits file.
 
     max_quality : int
-        Maximum quality for the cadences.
+        Maximum tolerated quality for the cadences.
 
     References
     ----------
@@ -55,14 +82,6 @@ class TargetPixelFile(object):
         """Returns the flux for all good-quality cadences."""
         return self.hdu[1].data['FLUX'][self.good_quality_mask(), :, :]
 
-    def median_flux(self):
-        """Returns the median flux across all cadences."""
-        return np.nanmedian(self.flux, axis=0)
-
-    def mean_flux(self):
-        """Returns the mean flux across all cadences."""
-        return np.nanmean(self.flux, axis=0)
-
     def aperture_mask(self, snr_threshold=5, margin=4):
         """Returns an aperture photometry mask.
 
@@ -73,7 +92,7 @@ class TargetPixelFile(object):
         """
 
         # Find the pixels that are above the threshold in the median flux image
-        median = self.median_flux()
+        median = np.nanmedian(self.flux, axis=0)
         mad = median_absolute_deviation(median[np.isfinite(median)])
         # 1.4826 turns MAD into STDEV for a Gaussian
         mad_cut = 1.4826 * mad * snr_threshold
@@ -132,7 +151,7 @@ class TargetPixelFile(object):
 
         return xc, yc
 
-    def to_lightcurve(self, aperture_mask=None):
+    def to_lightcurve(self, aperture_mask=None, method=None):
         """Returns a raw light curve of the TPF.
 
         Attributes
@@ -140,10 +159,12 @@ class TargetPixelFile(object):
         aperture_mask: boolean ndarray or None
             Aperture under which the flux will be summed up. If ``None``,
             then an aperture is computed using ``aperture_mask``.
+        method : str or None
+            Method to detrend the light curve.
 
         Returns
         -------
-        lightcurve : ndarray
+        lc : LightCurve object
             Array containing the summed flux within the aperture for each
             cadence.
         """
@@ -151,11 +172,16 @@ class TargetPixelFile(object):
         if aperture_mask is None:
             aperture_mask = self.aperture_mask()
 
-        lightcurve = np.zeros(self.n_cadences)
+        lc = np.zeros(self.n_cadences)
         for i in range(self.n_cadences):
-            lightcurve[i] = self.flux[i][aperture_mask].sum()
+            lc[i] = self.flux[i][aperture_mask].sum()
 
-        return lightcurve
+        if method is not None:
+            lc = LightCurve(flux=lc, time=self.time).detrend(method=method)
+        else:
+            lc = LightCurve(flux=lc, time=self.time)
+
+        return lc
 
 
 """
