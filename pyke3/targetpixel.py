@@ -10,24 +10,25 @@ from .lightcurve import LightCurve
 
 class TargetPixelFile(ABC):
     @abstractmethod
-    def to_lightcurve(self, aperture_mask=None):
-    """Returns a raw light curve of the TPF.
+    def to_lightcurve(self, aperture_mask=None, method=None):
+        """Returns a raw light curve of the TPF.
 
-    Attributes
-    ----------
-    aperture_mask: boolean ndarray or None
-        TODO: astropy regions??
+        Attributes
+        ----------
+        aperture_mask: boolean ndarray or None
+            Aperture under which the flux will be summed up. If ``None``,
+            then an aperture is computed using ``aperture_mask``.
+        method : str or None
+            Method to detrend the light curve.
 
-        Aperture under which the flux will be summed up. If ``None``,
-        then an aperture is computed using ``aperture_mask``.
+        Returns
+        -------
+        lc : LightCurve object
+            Array containing the summed or detrended flux within the aperture
+            for each cadence.
+        """
 
-    Returns
-    -------
-    lightcurve : LightCurve
-        Array containing the summed flux within the aperture for each
-        cadence.
-    """
-    pass
+        pass
 
 
 class KeplerTargetPixelFile(object):
@@ -152,22 +153,6 @@ class KeplerTargetPixelFile(object):
         return xc, yc
 
     def to_lightcurve(self, aperture_mask=None, method=None):
-        """Returns a raw light curve of the TPF.
-
-        Attributes
-        ----------
-        aperture_mask: boolean ndarray or None
-            Aperture under which the flux will be summed up. If ``None``,
-            then an aperture is computed using ``aperture_mask``.
-        method : str or None
-            Method to detrend the light curve.
-
-        Returns
-        -------
-        lc : LightCurve object
-            Array containing the summed flux within the aperture for each
-            cadence.
-        """
 
         if aperture_mask is None:
             aperture_mask = self.aperture_mask()
