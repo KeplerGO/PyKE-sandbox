@@ -10,7 +10,7 @@ from .lightcurve import LightCurve
 
 class TargetPixelFile(ABC):
     @abstractmethod
-    def to_lightcurve(self, aperture_mask=None, method=None):
+    def to_lightcurve(self, aperture_mask=None, method=None, **kwargs):
         """Returns a raw light curve of the TPF.
 
         Attributes
@@ -20,6 +20,8 @@ class TargetPixelFile(ABC):
             then an aperture is computed using ``aperture_mask``.
         method : str or None
             Method to detrend the light curve.
+        kwargs : dict
+            Keyword arguments passed to the detrending method.
 
         Returns
         -------
@@ -31,7 +33,7 @@ class TargetPixelFile(ABC):
         pass
 
 
-class KeplerTargetPixelFile(object):
+class KeplerTargetPixelFile(TargetPixelFile):
     """
     Defines a tpf class for the Kepler Mission.
     Enables extraction of raw lightcurves and centroid positions.
@@ -152,19 +154,18 @@ class KeplerTargetPixelFile(object):
 
         return xc, yc
 
-    def to_lightcurve(self, aperture_mask=None, method=None):
+    def to_lightcurve(self, aperture_mask=None, method=None, **kwargs):
 
         if aperture_mask is None:
             aperture_mask = self.aperture_mask()
-
         lc = np.zeros(self.n_cadences)
         for i in range(self.n_cadences):
             lc[i] = self.flux[i][aperture_mask].sum()
-
-        if method is not None:
-            lc = LightCurve(flux=lc, time=self.time).detrend(method=method)
-        else:
+        if method is None:
             lc = LightCurve(flux=lc, time=self.time)
+        else:
+            lc = LightCurve(flux=lc, time=self.time).detrend(method=method,
+                                                 **kwargs)
 
         return lc
 

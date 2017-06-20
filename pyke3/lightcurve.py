@@ -25,7 +25,7 @@ class LightCurve(object):
         """
         """
         if method == 'arclength':
-            return ArcLengthDetrender.detrend(self.time, self.flux, kwargs)
+            return ArcLengthDetrender.detrend(self.time, self.flux, **kwargs)
 
 class Detrender(ABC):
     """
